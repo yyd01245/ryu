@@ -35,7 +35,7 @@ from netconf_switch import NetconfSwitch
 from six.moves import http_client
 
 from ryu.app.wsgi import ControllerBase
-from ryu.app.wsgi import Response
+from ryu.app.wsgi import Response 
 from ryu.app.wsgi import WSGIApplication
 from ryu.base import app_manager
 from ryu.lib import hub
@@ -56,7 +56,8 @@ REST_USERNAME = 'username'
 REST_PASSWORD = 'password'
 REST_HOST = 'host'
 REST_PORT = 'port'
-
+REST_CMD = 'cmd'
+REST_DEVICES = 'device'
 
 class NotFoundError(RyuException):
     message = 'switch is not connected. : switch_id=%(switch_id)s'
@@ -92,15 +93,37 @@ def rest_command(func):
 
 class UpWanNetconfClient(NetconfSwitch):
 
-    def __init__(self, name, host, port, username, password):
-        self._name = name
+    def __init__(self, switch_id, name, 
+            host, port, username, 
+            password,device_params):
+        self._name = name   
+        self._switch_id =  switch_id
         super(UpWanNetconfClient, self).__init__(
             host=host, port=port, username=username, password=password,
-            device_params={"name":"h3c"},
+            device_params=device_params,
             unknown_host_cb=lambda host, fingeprint: True)
-    
-    def get_switch(self):
-        pass
+
+    def get_switch(self,data):
+        # self._LOGGER.info('get_switch:%s',self._name )
+        # return self._name 
+        return self.do_list_cap()
+
+    def cli_switch(self,data):
+        print " ---- data : %s" % data
+        
+        print " ---- data cmd: %s" % data[REST_CMD]
+        # self._LOGGER.info('cli_switch:%s,data:%s',self._name ,data)
+        return self._name 
+
+    def do_list_cap(self):
+        """list_cap
+        """
+        text = []
+        print "-- type cap : %s" % type(self.netconf.server_capabilities)
+        for i in self.netconf.server_capabilities:
+            text.append(i)
+
+        return {"node_name":self._name, "switch_id":self._switch_id, "capabilities":text}
 
     def _do_of_config(self):
         self._do_get()
@@ -151,8 +174,13 @@ class UpWanSwitchController(ControllerBase):
             password = data[REST_PASSWORD]
             port = data[REST_PORT]
             host = data[REST_HOST]
+            device_params = data[REST_DEVICES]
             cls._LOGGER.info('username:%s',username)
-            switch = UpWanNetconfClient(name, host, port, username, password)    
+            switch = UpWanNetconfClient(switch_id=switch_id,name=name, host=host, 
+                port=port, username=username, password=password,
+                device_params=device_params)   
+            # switch = UpWanNetconfClient(switch_id,name, host, 
+            #     port, username, password,device_params)             
             details = 'register new neconf switch [switch_id=%s,name=%s]' % (switch_id,name)
             
         except CommandFailure as err_msg:
@@ -164,7 +192,7 @@ class UpWanSwitchController(ControllerBase):
             msg = {REST_RESULT: REST_OK, REST_DETAILS: details}
             cls._SWITCH_LIST.setdefault(switch_id, switch)
 
-            cls._LOGGER.info('Join netconf switch. %s', switch_id)
+            cls._LOGGER.info('register_switch netconf switch. %s', switch_id)
             msg.setdefault(REST_SWITCHID, switch_id)            
             return msg
         else:
@@ -192,7 +220,7 @@ class UpWanSwitchController(ControllerBase):
 
     @rest_command
     def get_switch(self, req, switch_id, **_kwargs):
-        self._LOGGER.info('Join netconf switch:%s',switch_id)
+        self._LOGGER.info('get_switch netconf switch:%s',switch_id)
         return self._access_switch(switch_id,'get_switch', req)
 
 
@@ -203,21 +231,26 @@ class UpWanSwitchController(ControllerBase):
 
     @rest_command         
     def config_switch(self, _req, switch_id, **_kwargs):
-        self._LOGGER.info('Join netconf switch:%s',switch_id)
+        self._LOGGER.info('1 config_switch netconf switch:%s',switch_id)
         try:
             param = _req.json if _req.body else {}
         except ValueError:
             raise SyntaxError('invalid syntax %s', _req.body)
 
-        msg = UpWanSwitchController.register_switch(switch_id,param)
-        body = json.dumps(msg)
-        return Response(content_type='application/json', body=body)        
+        return UpWanSwitchController.register_switch(switch_id,param)
+        # body = json.dumps(msg)
+        # return Response(content_type='application/json', body=body)        
         # return self._access_switch(switch_id,'config_switch', req)
+
+    @rest_command        
+    def cli_switch(self, _req, switch_id, **_kwargs):
+        self._LOGGER.info('cli_switch netconf switch:%s',switch_id)
+        return self._access_switch(switch_id,'cli_switch', _req)
 
     @rest_command         
     def delete_switch(self, _req, switch_id, **_kwargs):
-        self._LOGGER.info('Join netconf switch:%s',switch_id)
-        return self._access_switch(switch_id,'delete_switch', req)
+        self._LOGGER.info('delete_switch netconf switch:%s',switch_id)
+        return self._access_switch(switch_id,'delete_switch', _req)
 
     def _access_switch(self, switch_id, func, req):
         rest_message = []
@@ -229,20 +262,23 @@ class UpWanSwitchController(ControllerBase):
             raise SyntaxError('invalid syntax %s', req.body)
         for switch in switches.values():
             function = getattr(switch, func)
-            # data = function(param, self.waiters)
+            # body data as param
+            data = function(param)
             rest_message.append(data)
-        rest_message.append("hello _access_switch")
         return rest_message
 
     def _get_switch(self, switch_id):
         switches = {}
-        self._LOGGER.info('_get_switch: %s',switch_id)        
+        self._LOGGER.info('_get_switch: %s',switch_id)  
+        for k in self._SWITCH_LIST:
+           self._LOGGER.info('list in switches: k=%s,v=%s',k,self._SWITCH_LIST[k])   
+
         if switch_id == REST_ALL:
             switches = self._SWITCH_LIST
         else:
-            sw_id = dpid_lib.str_to_dpid(switch_id)
-            if sw_id in self._SWITCH_LIST:
-                switches = {sw_id: self._SWITCH_LIST[sw_id]}
+            # sw_id = dpid_lib.str_to_dpid(switch_id)
+            if switch_id in self._SWITCH_LIST:
+                switches = {switch_id: self._SWITCH_LIST[switch_id]}
 
         if switches:
             self._LOGGER.info('find switch: %s',switch_id)        
@@ -273,24 +309,29 @@ class UpWanSwitchAPI(app_manager.RyuApp):
         requirements = {'switch_id': SWITCHID_PATTERN}
 
         # For no vlan data
-        rootPath = '/upwan'
+        # rootPath = '/upwan'
         path = '/upwan/{switch_id}'
-        mapper.connect('upwan', rootPath, controller=UpWanSwitchController,
-                    #    requirements=requirements,
-                       action='list_switches',
-                       conditions=dict(method=['GET']))
+        cliPath = '/upwan/cli/{switch_id}'
+        # mapper.connect('upwan', rootPath, controller=UpWanSwitchController,
+        #             #    requirements=requirements,
+        #                action='list_switches',
+        #                conditions=dict(method=['GET']))
+
         mapper.connect('upwan', path, controller=UpWanSwitchController,
                        requirements=requirements,
                        action='get_switch',
                        conditions=dict(method=['GET']))                       
-        # mapper.connect('upwan', rootPath, controller=UpWanSwitchController,
-        #             #    requirements=requirements,
-        #                action='connect_switch',
-        #                conditions=dict(method=['POST']))
+
+
         mapper.connect('upwan', path, controller=UpWanSwitchController,
                        requirements=requirements,
                        action='config_switch',
-                       conditions=dict(method=['POST']))                       
+                       conditions=dict(method=['POST']))    
+
+        mapper.connect('upwan', cliPath, controller=UpWanSwitchController,
+                       requirements=requirements,
+                       action='cli_switch',
+                       conditions=dict(method=['POST']))                                           
         mapper.connect('upwan', path, controller=UpWanSwitchController,
                        requirements=requirements,
                        action='delete_switch',
