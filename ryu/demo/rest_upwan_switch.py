@@ -27,8 +27,13 @@ import socket
 import struct
 
 import json
+import xmltodict
 
 # import netconf_switch
+import lxml.etree as ET
+# from lxml import etree
+
+from ncclient.xml_ import *
 
 from netconf_switch import NetconfSwitch
 
@@ -42,8 +47,11 @@ from ryu.lib import hub
 from ryu.exception import RyuException
 from ryu.controller import conf_switch
 from ryu.lib import dpid as dpid_lib
+from ryu.lib.of_config import classes as ofc
 
-SWITCHID_PATTERN = dpid_lib.DPID_PATTERN + r'|all'
+_ID_LEN = 4
+ID_PATTERN = r'[0-9a-f]{%d}' % _ID_LEN
+SWITCHID_PATTERN = ID_PATTERN + r'|all'
 
 REST_RESULT = 'result'
 REST_DETAILS = 'details'
@@ -65,6 +73,9 @@ class NotFoundError(RyuException):
 
 class CommandFailure(RyuException):
     pass
+
+# new_ele = lambda tag, attrs={}, **extra: ET.Element(qualify(tag), attrs, **extra)
+
 
 # REST command template
 def rest_command(func):
@@ -91,6 +102,24 @@ def rest_command(func):
 
     return _rest_command
 
+def _get_schema():
+    # file_name = of_config.OF_CONFIG_1_0_XSD
+    # file_name = of_config.OF_CONFIG_1_1_XSD
+    file_name = of_config.OF_CONFIG_1_1_1_XSD
+    return lxml.etree.XMLSchema(file=file_name)
+
+CREATE_MPLS = """
+<config>
+        <cli-config-data>
+            <cmd>ip vpn-instance 10000</cmd>
+            <cmd>route-distinguisher 131573:20001</cmd>
+            <cmd>vpn-target 131573:20001 import-extcommunity</cmd>
+            <cmd>vpn-target 131573:20001 export-extcommunity</cmd>
+        </cli-config-data>
+</config>
+
+"""
+
 class UpWanNetconfClient(NetconfSwitch):
 
     def __init__(self, switch_id, name, 
@@ -106,14 +135,36 @@ class UpWanNetconfClient(NetconfSwitch):
     def get_switch(self,data):
         # self._LOGGER.info('get_switch:%s',self._name )
         # return self._name 
-        return self.do_list_cap()
+        return self.do_raw_get()
+        # return self.do_list_cap()
 
     def cli_switch(self,data):
         print " ---- data : %s" % data
         
         print " ---- data cmd: %s" % data[REST_CMD]
-        # self._LOGGER.info('cli_switch:%s,data:%s',self._name ,data)
-        return self._name 
+        if REST_CMD not in data.keys():
+            return "cannot find command"
+        cmd = data[REST_CMD]
+
+        node = ET.Element('Execution')
+        node.text = cmd
+        # 'display current-configuration'
+        # print node
+        # print "---begin cli--"
+        cli_res = self.netconf.cli(node)
+        # print cli_res
+        # print "--- cli_res type=%s" % type(cli_res)
+        # print cli_res._raw
+        # print "--- cli_res type=%s" % type(cli_res._raw)
+        
+        res = xmltodict.parse(cli_res._raw)
+        if "rpc-reply" in res.keys():
+            res = res["rpc-reply"]["CLI"]
+        # res = "%s" % cli_res
+        # # res = ET.fromstring(cli_res)
+        # print res
+        print "--- res type=%s" % type(res)
+        return res;
 
     def do_list_cap(self):
         """list_cap
@@ -124,6 +175,49 @@ class UpWanNetconfClient(NetconfSwitch):
             text.append(i)
 
         return {"node_name":self._name, "switch_id":self._switch_id, "capabilities":text}
+    def do_raw_get(self):
+        """raw_get <peer>
+        """
+        c = self.netconf.get_config(source='running') 
+        # .data_xml
+        res = xmltodict.parse(c._raw)
+        if "rpc-reply" in res.keys():
+            res = res["rpc-reply"]["data"]["top"]
+        return res
+
+    def edit_switch(self,data):
+        # self._LOGGER.info('get_switch:%s',self._name )
+        # return self._name 
+        confstr = CREATE_MPLS
+        rpc_obj = self.conn.edit_config(target='running', config=confstr)
+        res = xmltodict.parse(rpc_obj._raw)
+        # if "rpc-reply" in res.keys():
+        #     res = res["rpc-reply"]["data"]["top"]
+        return res
+        # return self.do_list_cap()
+
+    def _validate(self, tree):
+        xmlschema = _get_schema()
+        try:
+            xmlschema.assertValid(tree)
+        except:
+            traceback.print_exc()
+
+    def raw_edit_config(self, target, config, default_operation=None,
+                        test_option=None, error_option=None):
+        self.netconf.edit_config(target, config,
+                                 default_operation, test_option, error_option)
+    def _do_edit_config(self, config):
+        tree = lxml.etree.fromstring(config)
+        self._validate(tree)
+        # self.switch.raw_edit_config(target='running', config=config)
+
+    def do_raw_edit(self,target,capable_switch, default_operation=None):
+        """raw_edit <peer>
+        """
+        xml = ofc.NETCONF_Config(capable_switch=capable_switch).to_xml()
+        self.raw_edit_config(target, xml, default_operation)
+
 
     def _do_of_config(self):
         self._do_get()
@@ -174,7 +268,9 @@ class UpWanSwitchController(ControllerBase):
             password = data[REST_PASSWORD]
             port = data[REST_PORT]
             host = data[REST_HOST]
-            device_params = data[REST_DEVICES]
+            device_params = {}
+            if REST_DEVICES in data.keys():
+                device_params = data[REST_DEVICES]
             cls._LOGGER.info('username:%s',username)
             switch = UpWanNetconfClient(switch_id=switch_id,name=name, host=host, 
                 port=port, username=username, password=password,
@@ -201,10 +297,15 @@ class UpWanSwitchController(ControllerBase):
         
     @classmethod
     def unregister_switch(cls, switch_id):
+        cls._LOGGER.info('begin Leave switch %s.', switch_id)
+
         if switch_id in cls._SWITCH_LIST:
-            cls._SWITCH_LIST[switch_id].delete()
+            # cls._SWITCH_LIST[switch_id].delete()
+            del cls._SWITCH_LIST[switch_id]          
             del cls._SWITCH_LIST[switch_id]
             cls._LOGGER.info('Leave switch %s.', switch_id)
+        valu = "delete switch %s success." % switch_id
+        return {"result":valu}
 
     @rest_command
     def list_switches(self, _req, **_kwargs):
@@ -236,6 +337,9 @@ class UpWanSwitchController(ControllerBase):
             param = _req.json if _req.body else {}
         except ValueError:
             raise SyntaxError('invalid syntax %s', _req.body)
+        #check id if exist
+        if switch_id in self._SWITCH_LIST.keys():
+            return "node switch id %s is exist" % switch_id
 
         return UpWanSwitchController.register_switch(switch_id,param)
         # body = json.dumps(msg)
@@ -243,14 +347,19 @@ class UpWanSwitchController(ControllerBase):
         # return self._access_switch(switch_id,'config_switch', req)
 
     @rest_command        
+    def edit_switch(self, _req, switch_id, **_kwargs):
+        self._LOGGER.info('edit_switch netconf switch:%s',switch_id)
+        return self._access_switch(switch_id,'cli_switch', _req)
+    @rest_command        
     def cli_switch(self, _req, switch_id, **_kwargs):
         self._LOGGER.info('cli_switch netconf switch:%s',switch_id)
         return self._access_switch(switch_id,'cli_switch', _req)
 
     @rest_command         
     def delete_switch(self, _req, switch_id, **_kwargs):
-        self._LOGGER.info('delete_switch netconf switch:%s',switch_id)
-        return self._access_switch(switch_id,'delete_switch', _req)
+        # self._LOGGER.info('delete_switch netconf switch:%s',switch_id)
+        # return self._access_switch(switch_id,'delete_switch', _req)
+        return UpWanSwitchController.unregister_switch(switch_id)
 
     def _access_switch(self, switch_id, func, req):
         rest_message = []
@@ -312,6 +421,7 @@ class UpWanSwitchAPI(app_manager.RyuApp):
         # rootPath = '/upwan'
         path = '/upwan/{switch_id}'
         cliPath = '/upwan/cli/{switch_id}'
+        editPath = '/upwan/edit_config/{switch_id}'
         # mapper.connect('upwan', rootPath, controller=UpWanSwitchController,
         #             #    requirements=requirements,
         #                action='list_switches',
@@ -321,11 +431,14 @@ class UpWanSwitchAPI(app_manager.RyuApp):
                        requirements=requirements,
                        action='get_switch',
                        conditions=dict(method=['GET']))                       
-
-
         mapper.connect('upwan', path, controller=UpWanSwitchController,
                        requirements=requirements,
                        action='config_switch',
+                       conditions=dict(method=['POST']))  
+
+        mapper.connect('upwan', editPath, controller=UpWanSwitchController,
+                       requirements=requirements,
+                       action='edit_switch',
                        conditions=dict(method=['POST']))    
 
         mapper.connect('upwan', cliPath, controller=UpWanSwitchController,
