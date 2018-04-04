@@ -50,7 +50,7 @@ class NetconfSwitch(object):
         self.netconf = connect(*self._connect_args, **self._connect_kwargs)
 
     def close_session(self):
-        print "===== begin close"
+        print "===== begin close  ===="
         if self.netconf:
             self.netconf.close_session()
             self.netconf = None 
@@ -61,6 +61,7 @@ class NetconfSwitch(object):
         return self
 
     def __exit__(self):
+        print "--- exit --- "
         self.close_session()
 
     def client_capabilities(self):

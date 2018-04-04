@@ -27,15 +27,9 @@ import socket
 import struct
 
 import json
-import xmltodict
 
-# import netconf_switch
-import lxml.etree as ET
-# from lxml import etree
-
-from ncclient.xml_ import *
-
-from netconf_switch import NetconfSwitch
+from upwan_type import *
+from upwan_netconf_client import UpWanNetconfClient
 
 from six.moves import http_client
 
@@ -49,23 +43,6 @@ from ryu.controller import conf_switch
 from ryu.lib import dpid as dpid_lib
 from ryu.lib.of_config import classes as ofc
 
-_ID_LEN = 4
-ID_PATTERN = r'[0-9a-f]{%d}' % _ID_LEN
-SWITCHID_PATTERN = ID_PATTERN + r'|all'
-
-REST_RESULT = 'result'
-REST_DETAILS = 'details'
-REST_OK = 'success'
-REST_NG = 'failure'
-REST_ALL = 'all'
-REST_SWITCHID = 'switch_id'
-RESR_NAME = 'name'
-REST_USERNAME = 'username'
-REST_PASSWORD = 'password'
-REST_HOST = 'host'
-REST_PORT = 'port'
-REST_CMD = 'cmd'
-REST_DEVICES = 'device'
 
 class NotFoundError(RyuException):
     message = 'switch is not connected. : switch_id=%(switch_id)s'
@@ -73,8 +50,6 @@ class NotFoundError(RyuException):
 
 class CommandFailure(RyuException):
     pass
-
-# new_ele = lambda tag, attrs={}, **extra: ET.Element(qualify(tag), attrs, **extra)
 
 
 # REST command template
@@ -107,138 +82,6 @@ def _get_schema():
     # file_name = of_config.OF_CONFIG_1_1_XSD
     file_name = of_config.OF_CONFIG_1_1_1_XSD
     return lxml.etree.XMLSchema(file=file_name)
-
-CREATE_MPLS = """
-<config>
-        <cli-config-data>
-            <cmd>ip vpn-instance 10000</cmd>
-            <cmd>route-distinguisher 131573:20001</cmd>
-            <cmd>vpn-target 131573:20001 import-extcommunity</cmd>
-            <cmd>vpn-target 131573:20001 export-extcommunity</cmd>
-        </cli-config-data>
-</config>
-
-"""
-
-class UpWanNetconfClient(NetconfSwitch):
-
-    def __init__(self, switch_id, name, 
-            host, port, username, 
-            password,device_params):
-        self._name = name   
-        self._switch_id =  switch_id
-        super(UpWanNetconfClient, self).__init__(
-            host=host, port=port, username=username, password=password,
-            device_params=device_params,
-            unknown_host_cb=lambda host, fingeprint: True)
-
-    def get_switch(self,data):
-        # self._LOGGER.info('get_switch:%s',self._name )
-        # return self._name 
-        return self.do_raw_get()
-        # return self.do_list_cap()
-
-    def cli_switch(self,data):
-        print " ---- data : %s" % data
-        
-        print " ---- data cmd: %s" % data[REST_CMD]
-        if REST_CMD not in data.keys():
-            return "cannot find command"
-        cmd = data[REST_CMD]
-
-        node = ET.Element('Execution')
-        node.text = cmd
-        # 'display current-configuration'
-        # print node
-        # print "---begin cli--"
-        cli_res = self.netconf.cli(node)
-        # print cli_res
-        # print "--- cli_res type=%s" % type(cli_res)
-        # print cli_res._raw
-        # print "--- cli_res type=%s" % type(cli_res._raw)
-        
-        res = xmltodict.parse(cli_res._raw)
-        if "rpc-reply" in res.keys():
-            res = res["rpc-reply"]["CLI"]
-        # res = "%s" % cli_res
-        # # res = ET.fromstring(cli_res)
-        # print res
-        print "--- res type=%s" % type(res)
-        return res;
-
-    def do_list_cap(self):
-        """list_cap
-        """
-        text = []
-        print "-- type cap : %s" % type(self.netconf.server_capabilities)
-        for i in self.netconf.server_capabilities:
-            text.append(i)
-
-        return {"node_name":self._name, "switch_id":self._switch_id, "capabilities":text}
-    def do_raw_get(self):
-        """raw_get <peer>
-        """
-        c = self.netconf.get_config(source='running') 
-        # .data_xml
-        res = xmltodict.parse(c._raw)
-        if "rpc-reply" in res.keys():
-            res = res["rpc-reply"]["data"]["top"]
-        return res
-
-    def edit_switch(self,data):
-        # self._LOGGER.info('get_switch:%s',self._name )
-        # return self._name 
-        confstr = CREATE_MPLS
-        rpc_obj = self.conn.edit_config(target='running', config=confstr)
-        res = xmltodict.parse(rpc_obj._raw)
-        # if "rpc-reply" in res.keys():
-        #     res = res["rpc-reply"]["data"]["top"]
-        return res
-        # return self.do_list_cap()
-
-    def _validate(self, tree):
-        xmlschema = _get_schema()
-        try:
-            xmlschema.assertValid(tree)
-        except:
-            traceback.print_exc()
-
-    def raw_edit_config(self, target, config, default_operation=None,
-                        test_option=None, error_option=None):
-        self.netconf.edit_config(target, config,
-                                 default_operation, test_option, error_option)
-    def _do_edit_config(self, config):
-        tree = lxml.etree.fromstring(config)
-        self._validate(tree)
-        # self.switch.raw_edit_config(target='running', config=config)
-
-    def do_raw_edit(self,target,capable_switch, default_operation=None):
-        """raw_edit <peer>
-        """
-        xml = ofc.NETCONF_Config(capable_switch=capable_switch).to_xml()
-        self.raw_edit_config(target, xml, default_operation)
-
-
-    def _do_of_config(self):
-        self._do_get()
-        self._do_get_config('running')
-        self._do_get_config('startup')
-
-        # LINC doesn't support 'candidate' datastore
-        try:
-            self._do_get_config('candidate')
-        except ncclient.NCClientError:
-            traceback.print_exc()
-
-        # use raw XML format
-        self._do_edit_config(SWITCH_PORT_DOWN)
-        self._do_edit_config(SWITCH_ADVERTISED)
-        self._do_edit_config(SWITCH_CONTROLLER)
-
-        self._set_ports_down()
-
-        self.switch.close_session()
-
 
 class UpWanSwitchController(ControllerBase):
     _SWITCH_LIST = {}
@@ -301,8 +144,9 @@ class UpWanSwitchController(ControllerBase):
 
         if switch_id in cls._SWITCH_LIST:
             # cls._SWITCH_LIST[switch_id].delete()
-            del cls._SWITCH_LIST[switch_id]          
-            del cls._SWITCH_LIST[switch_id]
+            ob = cls._SWITCH_LIST[switch_id]
+            cls._SWITCH_LIST.pop(switch_id)
+            del ob       
             cls._LOGGER.info('Leave switch %s.', switch_id)
         valu = "delete switch %s success." % switch_id
         return {"result":valu}
@@ -349,7 +193,8 @@ class UpWanSwitchController(ControllerBase):
     @rest_command        
     def edit_switch(self, _req, switch_id, **_kwargs):
         self._LOGGER.info('edit_switch netconf switch:%s',switch_id)
-        return self._access_switch(switch_id,'cli_switch', _req)
+        return self._access_switch(switch_id,'edit_switch', _req)
+
     @rest_command        
     def cli_switch(self, _req, switch_id, **_kwargs):
         self._LOGGER.info('cli_switch netconf switch:%s',switch_id)
