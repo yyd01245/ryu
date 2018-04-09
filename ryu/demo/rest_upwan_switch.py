@@ -206,8 +206,21 @@ class UpWanSwitchController(ControllerBase):
         # return self._access_switch(switch_id,'delete_switch', _req)
         return UpWanSwitchController.unregister_switch(switch_id)
 
+    # def _access_switch(self, switch_id, func, req):
+    #     rest_message = []
+    #     self._LOGGER.info('_access_switch:%s',switch_id)        
+    #     switches = self._get_switch(switch_id)
+    #     try:
+    #         param = req.json if req.body else {}
+    #     except ValueError:
+    #         raise SyntaxError('invalid syntax %s', req.body)
+    #     for switch in switches.values():
+    #         function = getattr(switch, func)
+    #         # body data as param
+    #         data = function(param)
+    #         rest_message.append(data)
+    #     return rest_message
     def _access_switch(self, switch_id, func, req):
-        rest_message = []
         self._LOGGER.info('_access_switch:%s',switch_id)        
         switches = self._get_switch(switch_id)
         try:
@@ -218,9 +231,8 @@ class UpWanSwitchController(ControllerBase):
             function = getattr(switch, func)
             # body data as param
             data = function(param)
-            rest_message.append(data)
-        return rest_message
-
+            return data
+            
     def _get_switch(self, switch_id):
         switches = {}
         self._LOGGER.info('_get_switch: %s',switch_id)  
