@@ -51,11 +51,11 @@ class UpWanNetconfClient(NetconfSwitch):
     # return self.do_list_cap()
   def create_mpls(self,data):
     if REST_UID not in data.keys():
-      return "cannot find uid param"
-    if REST_ASN_NN not in data.keys():
-      return "cannot find asn_nn param"
+      return {"Execution":"error cannot find uid param"}
+    if REST_MPLS_ACTION not in data.keys():
+      return {"Execution":"error cannot find mpls_action"}
     uid = data[REST_UID]
-    asn_nn = data[REST_ASN_NN]
+    asn_nn = data[REST_MPLS_ACTION]
     text = create_template % (uid,asn_nn)
     print "get command: %s" % text
     node = ET.Element('Execution')
@@ -70,11 +70,11 @@ class UpWanNetconfClient(NetconfSwitch):
 
   def delete_mpls(self,data):
     if REST_UID not in data.keys():
-      return "cannot find uid param"
-    if REST_ASN_NN not in data.keys():
-      return "cannot find asn_nn param"
+      return {"Execution":"error cannot find uid param"}
+    if REST_MPLS_ACTION not in data.keys():
+      return {"Execution":"error cannot find mpls_action"}
     uid = data[REST_UID]
-    asn_nn = data[REST_ASN_NN]
+    asn_nn = data[REST_MPLS_ACTION]
     text = delete_template % (uid,asn_nn)
     print "get command: %s" % text
     node = ET.Element('Execution')
@@ -89,11 +89,11 @@ class UpWanNetconfClient(NetconfSwitch):
 
   def test_mpls(self,data):
     if REST_UID not in data.keys():
-      return "cannot find uid param"
-    if REST_ASN_NN not in data.keys():
-      return "cannot find asn_nn param"
+      return {"Execution":"error cannot find uid param"}
+    if REST_MPLS_ACTION not in data.keys():
+      return  {"Execution":"error cannot find mpls_action"}
     uid = data[REST_UID]
-    asn_nn = data[REST_ASN_NN]
+    asn_nn = data[REST_MPLS_ACTION]
     text = test_template % (uid,asn_nn)
     print "get command: %s" % text
     node = ET.Element('Execution')
@@ -113,20 +113,28 @@ class UpWanNetconfClient(NetconfSwitch):
     # if REST_CMD not in data.keys():
     #     return "cannot find command"
     if REST_CMD_TYPE not in data.keys():
-      return "cannot find command"
+      return {"Execution":"error cannot find cmd_type param","code":ERROR_CODE}
     # cmd = data[REST_CMD]
     cmd_type = data[REST_CMD_TYPE]
     # node = ET.Element('Execution')
-    # node.text = cmd        
+    # node.text = cmd     
+    result_txt = ""   
     if cmd_type == CREATE_MPLS:
-      return self.create_mpls(data)
+      result_txt = self.create_mpls(data)
     elif cmd_type == DELETE_MPLS:
-      return self.delete_mpls(data)
+      result_txt = self.delete_mpls(data)
     elif cmd_type == TEST_MPLS:
-      return self.test_mpls(data)
+      result_txt = self.test_mpls(data)
     else: 
-      print "unkown command"
-    return "unkown command"
+      result_txt = { "Execution":"unkown command"}
+    result_code = SUCCESS_CODE
+    for va in result_txt.values():
+      print "--- in for %s" % va
+      if va.find("error") >= 0 :
+        result_code = ERROR_CODE
+        break
+    result_txt["code"] = result_code
+    return result_txt
 
   def do_list_cap(self):
     """list_cap
