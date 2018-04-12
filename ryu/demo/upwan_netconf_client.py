@@ -51,12 +51,13 @@ class UpWanNetconfClient(NetconfSwitch):
     # return self.do_list_cap()
   def create_mpls(self,data):
     if REST_UID not in data.keys():
-      return {"Execution":"error cannot find uid param"}
-    if REST_MPLS_ACTION not in data.keys():
-      return {"Execution":"error cannot find mpls_action"}
-    uid = data[REST_UID]
-    asn_nn = data[REST_MPLS_ACTION]
-    text = create_template % (uid,asn_nn)
+      return {"Execution":"error cannot find netid param"}
+    if REST_PE_VLAN_IP not in data.keys():
+      return {"Execution":"error cannot find pe_vlan_ip"}
+    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    pe_vlan_ip = data[REST_PE_VLAN_IP]
+    # todo 
+    text = create_template % (netid,pe_vlan_ip)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -70,12 +71,16 @@ class UpWanNetconfClient(NetconfSwitch):
 
   def delete_mpls(self,data):
     if REST_UID not in data.keys():
-      return {"Execution":"error cannot find uid param"}
-    if REST_MPLS_ACTION not in data.keys():
-      return {"Execution":"error cannot find mpls_action"}
-    uid = data[REST_UID]
-    asn_nn = data[REST_MPLS_ACTION]
-    text = delete_template % (uid,asn_nn)
+      return {"Execution":"error cannot find netid param"}
+    if REST_IP_MASK not in data.keys():
+      return {"Execution":"error cannot find ipsec_ip_mask"}
+    if REST_NAS_VLAN_IP not in data.keys():
+      return {"Execution":"error cannot find nas_vlan_ip"}
+    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    ipsec_mask = data[REST_IP_MASK]
+    nas_vlan_ip = data[REST_NAS_VLAN_IP]
+    # //todo
+    text = delete_template % (netid,ipsec_mask)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -87,14 +92,58 @@ class UpWanNetconfClient(NetconfSwitch):
     print "--- res type=%s" % type(res)
     return res;
 
+  def add_route(self,data):
+    if REST_UID not in data.keys():
+      return {"Execution":"error cannot find netid param"}
+    if REST_IP_MASK not in data.keys():
+      return {"Execution":"error cannot find ipsec_ip_mask"}
+    if REST_NAS_VLAN_IP not in data.keys():
+      return {"Execution":"error cannot find nas_vlan_ip"}
+    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    ipsec_mask = data[REST_IP_MASK]
+    nas_vlan_ip = data[REST_NAS_VLAN_IP]
+    # todo
+    text = create_template % (netid,ipsec_mask)
+    print "get command: %s" % text
+    node = ET.Element('Execution')
+    node.text = text            
+    print ET.tostring(node)
+    cli_res = self.netconf.cli(node)
+    res = xmltodict.parse(cli_res._raw)
+    if "rpc-reply" in res.keys():
+      res = res["rpc-reply"]["CLI"]
+    print "--- res type=%s" % type(res)
+    return res;
+
+  def del_route(self,data):
+    if REST_UID not in data.keys():
+      return {"Execution":"error cannot find netid param"}
+    if REST_IP_MASK not in data.keys():
+      return {"Execution":"error cannot find ipsec_ip_mask"}
+    if REST_NAS_VLAN_IP not in data.keys():
+      return {"Execution":"error cannot find nas_vlan_ip"}
+    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    ipsec_mask = data[REST_IP_MASK]
+    nas_vlan_ip = data[REST_NAS_VLAN_IP]
+    # todo
+    text = create_template % (netid,ipsec_mask)
+    print "get command: %s" % text
+    node = ET.Element('Execution')
+    node.text = text            
+    print ET.tostring(node)
+    cli_res = self.netconf.cli(node)
+    res = xmltodict.parse(cli_res._raw)
+    if "rpc-reply" in res.keys():
+      res = res["rpc-reply"]["CLI"]
+    print "--- res type=%s" % type(res)
+    return res;
+
+
   def test_mpls(self,data):
     if REST_UID not in data.keys():
-      return {"Execution":"error cannot find uid param"}
-    if REST_MPLS_ACTION not in data.keys():
-      return  {"Execution":"error cannot find mpls_action"}
-    uid = data[REST_UID]
-    asn_nn = data[REST_MPLS_ACTION]
-    text = test_template % (uid,asn_nn)
+      return {"Execution":"error cannot find netid param"}
+    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    text = test_template % (netid)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -125,6 +174,10 @@ class UpWanNetconfClient(NetconfSwitch):
       result_txt = self.delete_mpls(data)
     elif cmd_type == TEST_MPLS:
       result_txt = self.test_mpls(data)
+    elif cmd_type == ADD_ROUTE:
+      result_txt = self.add_route(data)
+    elif cmd_type == DEL_ROUTE:
+      result_txt = self.del_route(data)
     else: 
       result_txt = { "Execution":"unkown command"}
     result_code = SUCCESS_CODE

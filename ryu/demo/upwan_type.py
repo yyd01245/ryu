@@ -17,28 +17,32 @@ REST_PORT = 'port'
 REST_CMD = 'cmd'
 REST_CMD_TYPE = 'cmd_type'
 REST_DEVICES = 'device'
-REST_UID = "uid"
+REST_UID = "netid"
+REST_PE_VLAN_IP = 'pe_vlan_ip'
+REST_NAS_VLAN_IP = 'nas_vlan_ip'
+REST_IP_MASK = 'ipsec_ip_mask'
 # REST_ASN_NN = "asn_nn"
-REST_MPLS_ACTION = "mpls_action"
-REST_ASN = "asn"
-REST_IP_MASK = "ip_mask"
+# REST_MPLS_ACTION = "mpls_action"
+# REST_ASN = "asn"
 REST_NEXT_ROUTE = "next_route"
 REST_IF_NAME = "if_name"
 
 CREATE_MPLS = "create_mpls"
-
+ADD_ROUTE = "add_route"
+ADD_ROUTE = "del_route"
 TEST_MPLS = "test_mpls"
 
 DELETE_MPLS = "delete_mpls"
 
+BEGIN_INTERFACE_ID = 10000
 ERROR_CODE = 100
 SUCCESS_CODE = 0
 
-test_template = "python test.py %s %s "
+test_template = "python test.py %s "
 # nn 10000 - uint32
-create_template = "python vpn.py %s %s "
+create_template = "python vpn.py %s %s add "
 # nn 10000 - uint32
-delete_template = "python vpn.py %s %s "
+delete_template = "python vpn.py %s %s del"
 
 add_route_template = "python route.py %s %s "
 
