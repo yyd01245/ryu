@@ -20,32 +20,34 @@ REST_DEVICES = 'device'
 REST_UID = "netid"
 REST_PE_VLAN_IP = 'pe_vlan_ip'
 REST_NAS_VLAN_IP = 'nas_vlan_ip'
-REST_IP_MASK = 'ipsec_ip_mask'
+REST_ROUTE = 'route'
 # REST_ASN_NN = "asn_nn"
 # REST_MPLS_ACTION = "mpls_action"
 # REST_ASN = "asn"
-REST_NEXT_ROUTE = "next_route"
+REST_NEXT_ROUTE_IP = "next_route_ip"
 REST_IF_NAME = "if_name"
 
 CREATE_MPLS = "create_mpls"
 ADD_ROUTE = "add_route"
-ADD_ROUTE = "del_route"
+DEL_ROUTE = "del_route"
 TEST_MPLS = "test_mpls"
 
 DELETE_MPLS = "delete_mpls"
 
 BEGIN_INTERFACE_ID = 10000
+BEGIN_VLAN_ID = 1000
 ERROR_CODE = 100
 SUCCESS_CODE = 0
 
 test_template = "python test.py %s "
 # nn 10000 - uint32
-create_template = "python vpn.py %s %s add "
-# nn 10000 - uint32
-delete_template = "python vpn.py %s %s del"
+# python vpn.py add_mpls "netid=10001,vlan=1001,vip=1.1.1.1 30,nip=21.1.2.1"
 
-add_route_template = "python route.py %s %s "
+create_template = 'python vpn.py add_mpls "%s" '
+# python vpn.py del_mpls "netid=10001,vlan=1001"
+delete_template = 'python vpn.py del_mpls "%s" '
+# python vpn.py add_route "netid=10001,vip=1.1.1.1 30,nip=21.1.2.1"
+add_route_template = 'python vpn.py add_route "%s" '
+# python vpn.py del_route "netid=10001,vip=1.1.1.1 30,nip=21.1.2.1"
+del_route_template = 'python vpn.py del_route "%s" '
 
-interface_template = "python interface.py %s %s "
-
-add_station_template = "python station.py %s %s %s"

@@ -89,6 +89,7 @@ class UpWanSwitchController(ControllerBase):
 
     def __init__(self, req, link, data, **config):
         super(UpWanSwitchController, self).__init__(req, link, data, **config)
+        # self.monitor_thread = hub.spawn(self._monitor)
         # self.conf_switch = data
     @classmethod
     def set_logger(cls, logger):
@@ -182,8 +183,8 @@ class UpWanSwitchController(ControllerBase):
         except ValueError:
             raise SyntaxError('invalid syntax %s', _req.body)
         #check id if exist
-        if switch_id in self._SWITCH_LIST.keys():
-            return "node switch id %s is exist" % switch_id
+        # if switch_id in self._SWITCH_LIST.keys():
+        #     return "node switch id %s is exist" % switch_id
 
         return UpWanSwitchController.register_switch(switch_id,param)
         # body = json.dumps(msg)
@@ -251,7 +252,12 @@ class UpWanSwitchController(ControllerBase):
             return switches
         else:
             raise NotFoundError(switch_id=switch_id)
-
+    
+    # def _monitor(self):
+    #     while True:
+    #         for dp in self._SWITCH_LIST.values():
+                
+    #         hub.sleep(10)
 
 class UpWanSwitchAPI(app_manager.RyuApp):
     # _CONTEXTS = {

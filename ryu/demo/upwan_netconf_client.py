@@ -54,10 +54,21 @@ class UpWanNetconfClient(NetconfSwitch):
       return {"Execution":"error cannot find netid param"}
     if REST_PE_VLAN_IP not in data.keys():
       return {"Execution":"error cannot find pe_vlan_ip"}
-    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    if REST_NAS_VLAN_IP not in data.keys():
+      return {"Execution":"error cannot find nas_vlan_ip"}
+    # netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
     pe_vlan_ip = data[REST_PE_VLAN_IP]
-    # todo 
-    text = create_template % (netid,pe_vlan_ip)
+    nas_vlan_ip = data[REST_NAS_VLAN_IP]
+
+    txt_split = pe_vlan_ip.split("/")
+    ip = txt_split[0]
+    mask = txt_split[1]
+
+    param = "netid=%d,vlan=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+               (data[REST_UID] + BEGIN_VLAN_ID),
+               ip,mask,nas_vlan_ip)
+    text = create_template % (param)  
+    # text = create_template % (netid,pe_vlan_ip)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -72,15 +83,15 @@ class UpWanNetconfClient(NetconfSwitch):
   def delete_mpls(self,data):
     if REST_UID not in data.keys():
       return {"Execution":"error cannot find netid param"}
-    if REST_IP_MASK not in data.keys():
-      return {"Execution":"error cannot find ipsec_ip_mask"}
-    if REST_NAS_VLAN_IP not in data.keys():
-      return {"Execution":"error cannot find nas_vlan_ip"}
-    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
-    ipsec_mask = data[REST_IP_MASK]
-    nas_vlan_ip = data[REST_NAS_VLAN_IP]
-    # //todo
-    text = delete_template % (netid,ipsec_mask)
+    # if REST_ROUTE not in data.keys():
+    #   return {"Execution":"error cannot find ipsec_ip_mask"}
+    
+    # netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
+    # ipsec_mask = data[REST_ROUTE]
+    # nas_vlan_ip = data[REST_NAS_VLAN_IP]
+    param = "netid=%d,vlan=%d" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              (data[REST_UID] + BEGIN_VLAN_ID))
+    text = delete_template % (param)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -95,15 +106,20 @@ class UpWanNetconfClient(NetconfSwitch):
   def add_route(self,data):
     if REST_UID not in data.keys():
       return {"Execution":"error cannot find netid param"}
-    if REST_IP_MASK not in data.keys():
+    if REST_ROUTE not in data.keys():
       return {"Execution":"error cannot find ipsec_ip_mask"}
-    if REST_NAS_VLAN_IP not in data.keys():
-      return {"Execution":"error cannot find nas_vlan_ip"}
-    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
-    ipsec_mask = data[REST_IP_MASK]
-    nas_vlan_ip = data[REST_NAS_VLAN_IP]
-    # todo
-    text = create_template % (netid,ipsec_mask)
+    if REST_NEXT_ROUTE_IP not in data.keys():
+      return {"Execution":"error cannot find next_route_ip"}
+    ipsec_mask = data[REST_ROUTE]
+    next_route_ip = data[REST_NEXT_ROUTE_IP]
+
+    txt_split = ipsec_mask.split("/")
+    ip = txt_split[0]
+    mask = txt_split[1]
+    param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              ip,mask,next_route_ip)
+    # todo multi ip mask cannot add chinese 
+    text = add_route_template % (param)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
@@ -118,15 +134,20 @@ class UpWanNetconfClient(NetconfSwitch):
   def del_route(self,data):
     if REST_UID not in data.keys():
       return {"Execution":"error cannot find netid param"}
-    if REST_IP_MASK not in data.keys():
+    if REST_ROUTE not in data.keys():
       return {"Execution":"error cannot find ipsec_ip_mask"}
-    if REST_NAS_VLAN_IP not in data.keys():
+    if REST_NEXT_ROUTE_IP not in data.keys():
       return {"Execution":"error cannot find nas_vlan_ip"}
-    netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
-    ipsec_mask = data[REST_IP_MASK]
-    nas_vlan_ip = data[REST_NAS_VLAN_IP]
-    # todo
-    text = create_template % (netid,ipsec_mask)
+    ipsec_mask = data[REST_ROUTE]
+    next_route_ip = data[REST_NEXT_ROUTE_IP]
+
+    txt_split = ipsec_mask.split("/")
+    ip = txt_split[0]
+    mask = txt_split[1]
+    param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              ip,mask,next_route_ip)
+    # todo multi ip mask cannot add chinese 
+    text = del_route_template % (param)
     print "get command: %s" % text
     node = ET.Element('Execution')
     node.text = text            
