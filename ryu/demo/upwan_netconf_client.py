@@ -26,6 +26,7 @@ class UpWanNetconfClient(NetconfSwitch):
     self._device_params = device_params
     super(UpWanNetconfClient, self).__init__(
         host=host, port=port, username=username, password=password,
+        timeout=120,
         device_params=device_params,
         unknown_host_cb=lambda host, fingeprint: True)
   def __del__(self):
