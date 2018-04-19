@@ -43,11 +43,11 @@ test_template = "python test.py %s "
 # nn 10000 - uint32
 # python vpn.py add_mpls "netid=10001,vlan=1001,vip=1.1.1.1 30,nip=21.1.2.1"
 
-create_template = 'python vpn.py add_mpls "%s" '
+create_template = 'python vpn.py add_mpls %s '
 # python vpn.py del_mpls "netid=10001,vlan=1001"
-delete_template = 'python vpn.py del_mpls "%s" '
-# python vpn.py add_route "netid=10001,vip=1.1.1.1 30,nip=21.1.2.1"
-add_route_template = 'python vpn.py add_route "%s" '
+delete_template = 'python vpn.py del_mpls %s '
+# python vpn.py add_route "netid=10001,vip=1.1.1.1 26;2.2.2.2 26,nip=21.1.2.1"
+add_route_template = 'python vpn.py add_route %s '
 # python vpn.py del_route "netid=10001,vip=1.1.1.1 30,nip=21.1.2.1"
-del_route_template = 'python vpn.py del_route "%s" '
+del_route_template = 'python vpn.py del_route %s '
 

@@ -60,13 +60,16 @@ class UpWanNetconfClient(NetconfSwitch):
     pe_vlan_ip = data[REST_PE_VLAN_IP]
     nas_vlan_ip = data[REST_NAS_VLAN_IP]
 
-    txt_split = pe_vlan_ip.split("/")
-    ip = txt_split[0]
-    mask = txt_split[1]
 
-    param = "netid=%d,vlan=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+    param = "netid=%d,vlan=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
                (data[REST_UID] + BEGIN_VLAN_ID),
-               ip,mask,nas_vlan_ip)
+               pe_vlan_ip,nas_vlan_ip)
+    # txt_split = pe_vlan_ip.split("/")
+    # ip = txt_split[0]
+    # mask = txt_split[1]
+    # param = "netid=%d,vlan=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+    #            (data[REST_UID] + BEGIN_VLAN_ID),
+    #            ip,mask,nas_vlan_ip)
     text = create_template % (param)  
     # text = create_template % (netid,pe_vlan_ip)
     print "get command: %s" % text
@@ -113,11 +116,13 @@ class UpWanNetconfClient(NetconfSwitch):
     ipsec_mask = data[REST_ROUTE]
     next_route_ip = data[REST_NEXT_ROUTE_IP]
 
-    txt_split = ipsec_mask.split("/")
-    ip = txt_split[0]
-    mask = txt_split[1]
-    param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
-              ip,mask,next_route_ip)
+    # txt_split = ipsec_mask.split("/")
+    # ip = txt_split[0]
+    # mask = txt_split[1]
+    # param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+    #           ip,mask,next_route_ip)
+    param = "netid=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              ipsec_mask,next_route_ip)
     # todo multi ip mask cannot add chinese 
     text = add_route_template % (param)
     print "get command: %s" % text
@@ -141,11 +146,13 @@ class UpWanNetconfClient(NetconfSwitch):
     ipsec_mask = data[REST_ROUTE]
     next_route_ip = data[REST_NEXT_ROUTE_IP]
 
-    txt_split = ipsec_mask.split("/")
-    ip = txt_split[0]
-    mask = txt_split[1]
-    param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
-              ip,mask,next_route_ip)
+    # txt_split = ipsec_mask.split("/")
+    # ip = txt_split[0]
+    # mask = txt_split[1]
+    # param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+    #           ip,mask,next_route_ip)
+    param = "netid=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              ipsec_mask,next_route_ip)
     # todo multi ip mask cannot add chinese 
     text = del_route_template % (param)
     print "get command: %s" % text
@@ -179,7 +186,7 @@ class UpWanNetconfClient(NetconfSwitch):
   def cli_switch(self,data):
     print " ---- data : %s" % data
     
-    print " ---- data cmd: %s" % data[REST_CMD_TYPE]
+    # print " ---- data cmd: %s" % data[REST_CMD_TYPE]
     # if REST_CMD not in data.keys():
     #     return "cannot find command"
     if REST_CMD_TYPE not in data.keys():
