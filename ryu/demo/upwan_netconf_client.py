@@ -57,14 +57,18 @@ class UpWanNetconfClient(NetconfSwitch):
       return {"Execution":"error cannot find pe_vlan_ip"}
     if REST_NAS_VLAN_IP not in data.keys():
       return {"Execution":"error cannot find nas_vlan_ip"}
+    if REST_USER_IP not in data.keys():
+      return {"Execution":"error cannot find user_ip"}
+      
     # netid = "%d" % (data[REST_UID] + BEGIN_INTERFACE_ID)
     pe_vlan_ip = data[REST_PE_VLAN_IP]
     nas_vlan_ip = data[REST_NAS_VLAN_IP]
+    # user_ip use ; split :1.1.1.1/24;2.2.2.2/24
+    user_ip = data[REST_USER_IP]
 
-
-    param = "netid=%d,vlan=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+    param = create_param_template % ((data[REST_UID] + BEGIN_INTERFACE_ID),
                (data[REST_UID] + BEGIN_VLAN_ID),
-               pe_vlan_ip,nas_vlan_ip)
+               pe_vlan_ip,user_ip,nas_vlan_ip)
     # txt_split = pe_vlan_ip.split("/")
     # ip = txt_split[0]
     # mask = txt_split[1]

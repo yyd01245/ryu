@@ -20,6 +20,7 @@ REST_DEVICES = 'device'
 REST_UID = "netid"
 REST_PE_VLAN_IP = 'pe_vlan_ip'
 REST_NAS_VLAN_IP = 'nas_vlan_ip'
+REST_USER_IP = 'user_ip'
 REST_ROUTE = 'route'
 # REST_ASN_NN = "asn_nn"
 # REST_MPLS_ACTION = "mpls_action"
@@ -41,7 +42,8 @@ SUCCESS_CODE = 0
 
 test_template = "python test.py %s "
 # nn 10000 - uint32
-# python vpn.py add_mpls "netid=10001,vlan=1001,vip=1.1.1.1 30,nip=21.1.2.1"
+# python vpn.py add_mpls "netid=10001,vlan=1001,vip=1.1.1.1/30,ip=192.168.0.0/24;192.168.2.2/24,nip=21.1.2.1"
+create_param_template = "netid=%d,vlan=%d,vip=%s,ip=%s,nip=%s"
 
 create_template = 'python vpn.py add_mpls %s '
 # python vpn.py del_mpls "netid=10001,vlan=1001"
