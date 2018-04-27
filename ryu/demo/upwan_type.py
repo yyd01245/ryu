@@ -16,6 +16,7 @@ REST_HOST = 'host'
 REST_PORT = 'port'
 REST_CMD = 'cmd'
 REST_CMD_TYPE = 'cmd_type'
+REST_NETCONF_INFO = 'netconf_info'
 REST_DEVICES = 'device'
 REST_UID = "netid"
 REST_PE_VLAN_IP = 'pe_vlan_ip'

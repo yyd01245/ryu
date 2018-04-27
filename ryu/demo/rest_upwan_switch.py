@@ -47,6 +47,8 @@ from ryu.lib.of_config import classes as ofc
 class NotFoundError(RyuException):
     message = 'switch is not connected. : switch_id=%(switch_id)s'
 
+class NotNetconfError(RyuException):
+    message = 'cannot find netconf info. : switch_id=%(switch_id)s'
 
 class CommandFailure(RyuException):
     pass
@@ -223,7 +225,7 @@ class UpWanSwitchController(ControllerBase):
     #     return rest_message
     def _access_switch(self, switch_id, func, req):
         self._LOGGER.info('_access_switch:%s',switch_id)        
-        switches = self._get_switch(switch_id)
+        switches = self._get_switch(switch_id,req)
         try:
             param = req.json if req.body else {}
         except ValueError:
@@ -234,7 +236,7 @@ class UpWanSwitchController(ControllerBase):
             data = function(param)
             return data
             
-    def _get_switch(self, switch_id):
+    def _get_switch(self, switch_id,_req):
         switches = {}
         self._LOGGER.info('_get_switch: %s',switch_id)  
         for k in self._SWITCH_LIST:
@@ -251,7 +253,21 @@ class UpWanSwitchController(ControllerBase):
             self._LOGGER.info('find switch: %s',switch_id)        
             return switches
         else:
-            raise NotFoundError(switch_id=switch_id)
+            # mount netconf
+            try:
+                param = _req.json if _req.body else {}
+                if REST_NETCONF_INFO not in param.keys():
+                    raise NotNetconfError(switch_id=switch_id)
+            except ValueError:
+                raise SyntaxError('invalid syntax %s', _req.body)            
+
+            self._LOGGER.info('register_switch netconf switch. %s', switch_id) 
+            self._LOGGER.info('info netconf switch. %s', param[REST_NETCONF_INFO])                                   
+            UpWanSwitchController.register_switch(switch_id,param[REST_NETCONF_INFO])
+            if switch_id in self._SWITCH_LIST:
+                return {switch_id: self._SWITCH_LIST[switch_id]}
+            else:
+                raise NotFoundError(switch_id=switch_id)
     
     # def _monitor(self):
     #     while True:
