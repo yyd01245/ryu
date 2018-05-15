@@ -65,10 +65,20 @@ class UpWanNetconfClient(NetconfSwitch):
     nas_vlan_ip = data[REST_NAS_VLAN_IP]
     # user_ip use ; split :1.1.1.1/24;2.2.2.2/24
     user_ip = data[REST_USER_IP]
+    # print user_ip
+    # print type(user_ip)
+    strStation = ""
+  
+    for value in user_ip:
+      # print "get station : ", value
+      if strStation != "":
+        strStation += ";"
+      strStation += value
+    print strStation
 
     param = create_param_template % ((data[REST_UID] + BEGIN_INTERFACE_ID),
                (data[REST_UID] + BEGIN_VLAN_ID),
-               pe_vlan_ip,user_ip,nas_vlan_ip)
+               pe_vlan_ip,strStation,nas_vlan_ip)
     # txt_split = pe_vlan_ip.split("/")
     # ip = txt_split[0]
     # mask = txt_split[1]
