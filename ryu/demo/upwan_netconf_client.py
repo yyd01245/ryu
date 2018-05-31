@@ -128,16 +128,23 @@ class UpWanNetconfClient(NetconfSwitch):
       return {"Execution":"error cannot find ipsec_ip_mask"}
     if REST_NEXT_ROUTE_IP not in data.keys():
       return {"Execution":"error cannot find next_route_ip"}
-    ipsec_mask = data[REST_ROUTE]
+    user_ip = data[REST_ROUTE]
     next_route_ip = data[REST_NEXT_ROUTE_IP]
 
+    strStation = ""
+    for value in user_ip:
+      # print "get station : ", value
+      if strStation != "":
+        strStation += ";"
+      strStation += value
+    print strStation
     # txt_split = ipsec_mask.split("/")
     # ip = txt_split[0]
     # mask = txt_split[1]
     # param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
     #           ip,mask,next_route_ip)
-    param = "netid=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
-              ipsec_mask,next_route_ip)
+    param = "netid=%d,ip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
+              strStation,next_route_ip)
     # todo multi ip mask cannot add chinese 
     text = add_route_template % (param)
     print "get command: %s" % text
@@ -158,8 +165,16 @@ class UpWanNetconfClient(NetconfSwitch):
       return {"Execution":"error cannot find ipsec_ip_mask"}
     if REST_NEXT_ROUTE_IP not in data.keys():
       return {"Execution":"error cannot find nas_vlan_ip"}
-    ipsec_mask = data[REST_ROUTE]
+    user_ip = data[REST_ROUTE]
     next_route_ip = data[REST_NEXT_ROUTE_IP]
+
+    strStation = ""
+    for value in user_ip:
+      # print "get station : ", value
+      if strStation != "":
+        strStation += ";"
+      strStation += value
+    print strStation
 
     # txt_split = ipsec_mask.split("/")
     # ip = txt_split[0]
@@ -167,7 +182,7 @@ class UpWanNetconfClient(NetconfSwitch):
     # param = "netid=%d,vip=%s %s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
     #           ip,mask,next_route_ip)
     param = "netid=%d,vip=%s,nip=%s" % ((data[REST_UID] + BEGIN_INTERFACE_ID),
-              ipsec_mask,next_route_ip)
+              strStation,next_route_ip)
     # todo multi ip mask cannot add chinese 
     text = del_route_template % (param)
     print "get command: %s" % text

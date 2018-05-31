@@ -86,7 +86,7 @@ def _get_schema():
     return lxml.etree.XMLSchema(file=file_name)
 
 class UpWanSwitchController(ControllerBase):
-    _SWITCH_LIST = {}
+    # _SWITCH_LIST = {}
     _LOGGER = None
 
     def __init__(self, req, link, data, **config):
@@ -140,7 +140,52 @@ class UpWanSwitchController(ControllerBase):
         else:
             raise ValueError('Invalid parameter.')                
         
+    @classmethod
+    def mount_switch(cls, switch_id, data ):
+        details = None
+        cls._LOGGER.info('register_switch:%s',switch_id)
+
+        try:
+            # Set address data
+            name = data[RESR_NAME]
+            username = data[REST_USERNAME]
+            password = data[REST_PASSWORD]
+            port = data[REST_PORT]
+            host = data[REST_HOST]
+            device_params = {}
+            if REST_DEVICES in data.keys():
+                device_params = data[REST_DEVICES]
+            cls._LOGGER.info('username:%s',username)
+            switch = UpWanNetconfClient(switch_id=switch_id,name=name, host=host, 
+                port=port, username=username, password=password,
+                device_params=device_params)   
+            # switch = UpWanNetconfClient(switch_id,name, host, 
+            #     port, username, password,device_params)             
+            details = 'mount new neconf switch [switch_id=%s,name=%s]' % (switch_id,name)
+            
+        except CommandFailure as err_msg:
+            msg = {REST_RESULT: REST_NG, REST_DETAILS: str(err_msg)}
+            msg.setdefault(REST_SWITCHID, switch_id)
+            return (msg,None)
+
+        if details is not None:
+            msg = {REST_RESULT: REST_OK, REST_DETAILS: details}
+
+            cls._LOGGER.info('mount_switch netconf switch. %s', switch_id)
+            msg.setdefault(REST_SWITCHID, switch_id)            
+            return (msg,switch)
+        else:
+            raise ValueError('Invalid parameter.')                
         
+ 
+    @classmethod
+    def unmount_switch(cls, switch_id, switch):
+        cls._LOGGER.info('begin Leave switch %s.', switch_id)
+        del switch       
+        cls._LOGGER.info('Leave switch %s.', switch_id)
+        valu = "delete switch %s success." % switch_id
+        return {"result":valu}       
+
     @classmethod
     def unregister_switch(cls, switch_id):
         cls._LOGGER.info('begin Leave switch %s.', switch_id)
@@ -225,7 +270,8 @@ class UpWanSwitchController(ControllerBase):
     #     return rest_message
     def _access_switch(self, switch_id, func, req):
         self._LOGGER.info('_access_switch:%s',switch_id)        
-        switches = self._get_switch(switch_id,req)
+        # switches = self._get_switch(switch_id,req)
+        switches = self._create_switch(switch_id,req)        
         try:
             param = req.json if req.body else {}
         except ValueError:
@@ -234,8 +280,29 @@ class UpWanSwitchController(ControllerBase):
             function = getattr(switch, func)
             # body data as param
             data = function(param)
+            # unmount
+            del switch
             return data
-            
+    def _create_switch(self, switch_id,_req):
+        switches = {}
+        self._LOGGER.info('_get_switch: %s',switch_id)  
+
+        # mount netconf
+        try:
+            param = _req.json if _req.body else {}
+            if REST_NETCONF_INFO not in param.keys():
+                raise NotNetconfError(switch_id=switch_id)
+        except ValueError:
+            raise SyntaxError('invalid syntax %s', _req.body)            
+
+        self._LOGGER.info('register_switch netconf switch. %s', switch_id) 
+        self._LOGGER.info('info netconf switch. %s', param[REST_NETCONF_INFO])                                   
+        (msg,switch) = UpWanSwitchController.mount_switch(switch_id,param[REST_NETCONF_INFO])
+        if switch:
+            return {switch_id: switch}
+        else:
+            raise NotFoundError(switch_id=switch_id)
+                
     def _get_switch(self, switch_id,_req):
         switches = {}
         self._LOGGER.info('_get_switch: %s',switch_id)  
